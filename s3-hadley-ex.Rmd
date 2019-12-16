@@ -3,16 +3,115 @@
 Lesen Sie das [`S3`](https://adv-r.hadley.nz/s3.html) Kapitel von H. Wickham's *Advanced R*. 
 Bearbeiten Sie (mindestens) die folgenden von dort übernommenen/inspirierten Aufgaben:
 
+### Aufgabe 1
 - Was tut die `as.data.frame.data.frame()` Methode? Warum ist das verwirrend? Wie können Sie derartige Verwirrung in Ihrem eigenen Code vermeiden?
+
+*Antwort:*
+
+
+Kurzgesagt: Die Methode konvertiert ein `data.frame- Object` in ein Objekt der Klasse `data.frame`
+(ein wenig überflüssig aber der Vollständigkeit halber muss es das wohl auch geben)
+
+
+Beispiel:
+```r
+identical(as.data.frame.data.frame(mtcars), mtcars)
+# [1] TRUE
+
+# Ein Blick mit sloop verrät...
+sloop::ftype(as.data.frame.data.frame)
+# [1] "S3"     "method"
+# ...und... 
+sloop::ftype(as.data.frame)
+# [1] "S3"      "generic"
+... aber...
+sloop::ftype(data.frame)
+# [1] "function"
+
+
+```
+Daraus folgt
+
+(1) ...entgegen der Gesetze für Nomenklatur von S3 Methoden wurden hier innerhalb der Funktion `data.frame` Punkte gesetzt
+
+(2) Die eigentliche `<generic>`-Function ist `as`, mit zugehöriger `<class>`: `data.frame`
+
+(3) Die gesamte Funktion `as.data.frame.data.frame`  ist aber gar kein generic sondern eine "normale" S3 methode für die Klasse Data.Frame
+
+
+```r
+methods(as.data.frame)
+#  [1] as.data.frame.aovproj*        as.data.frame.array           as.data.frame.AsIs           
+#  [4] as.data.frame.character       as.data.frame.complex         as.data.frame.data.frame     
+#  [7] as.data.frame.Date            as.data.frame.default         as.data.frame.difftime       
+# [10] as.data.frame.factor          as.data.frame.ftable*         as.data.frame.integer        
+# [13] as.data.frame.list            as.data.frame.logical         as.data.frame.logLik*        
+# [16] as.data.frame.matrix          as.data.frame.model.matrix    as.data.frame.noquote        
+# [19] as.data.frame.numeric         as.data.frame.numeric_version as.data.frame.ordered        
+# [22] as.data.frame.POSIXct         as.data.frame.POSIXlt         as.data.frame.raw            
+# [25] as.data.frame.table           as.data.frame.ts              as.data.frame.vector         
+# see '?methods' for accessing help and source code
+
+# und ein bisschen aussagekräftiger die Generics der Klasse:
+methods(class = "data.frame")
+#  [1] $<-           [             [[            [[<-          [<-           aggregate     anyDuplicated
+#  [8] as.data.frame as.list       as.matrix     by            cbind         coerce        dim          
+# [15] dimnames      dimnames<-    droplevels    duplicated    edit          format        formula      
+# [22] head          initialize    is.na         Math          merge         na.exclude    na.omit      
+# [29] Ops           plot          print         prompt        rbind         row.names     row.names<-  
+# [36] rowsum        show          slotsFromS3   split         split<-       stack         str          
+# [43] subset        summary       Summary       t             tail          transform     type.convert 
+# [50] unique        unstack       within       
+# see '?methods' for accessing help and source code
+
+```
+
+
+### Aufgabe 2
+
 - Beschreiben/erklären Sie das Verhalten dieses Codes:
 ```r
+# Schritt 1:
 set.seed(1014)
 some_days <- as.Date("2019-11-24") + sample(10, 5)
+some_days
+# [1] "2019-12-01" "2019-11-29" "2019-11-30" "2019-12-04" "2019-11-28"
+typeof(some_days)
+# [1] "double"
+unclass(as.Date("2019-11-24"))
+# [1] 18224
+unclass(some_days)
+# [1] 18231 18229 18230 18234 18228
+
+
+# Schritt 2:
 mean(some_days)
 # [1] "2019-11-30"
 mean(unclass(some_days))
 # [1] 18230.4
+
+methods(class = "Date")
+#  [1] -             [             [[            [<-           +             as.character  as.data.frame
+#  [8] as.list       as.POSIXct    as.POSIXlt    Axis          c             coerce        cut          
+# [15] diff          format        hist          initialize    is.numeric    julian        length<-     
+# [22] Math          mean          months        Ops           pretty        print         quarters     
+# [29] rep           round         seq           show          slotsFromS3   split         str          
+# [36] summary       Summary       trunc         weekdays      weighted.mean xtfrm        
+# see '?methods' for accessing help and source code
 ```
+*Antwort:*
+
+Die definierte print Methode, die einen String ausgibt verschleiert den eigentlichen Prozess hinter den Kulissen:
+
+Das Datum ist eigentlich ein Basistyp Double. Mit einem Datum kann man demnach die meisten Operationen anwenden, die mit man jedem anderen Double Vektor auch anwenden kann (siehe dafür methods oben).
+
+Sample zieht hier 5 Zufallszahlen zwischen eins und zehn (hier: 7, 5, 6, 10, 4) und addiert den Wert des Datums schlicht auf. +1 erhöht das Date demnach um einen Tag.
+
+Interessanterweise werden dabei nach den Regeln der Typekonversion die Integer die das sample generiert zu einem Double und somit zu einem Date mitkonvertiert. Brechnungen finden dann immer auf Basis des Basistypen statt. Also Mathematische Operationen.
+
+
+### Aufgabe 3
+
 - Welche Klasse hat `x` im folgenden Code? Auf welchem *base type* basiert diese Klasse? Welche Attribute nutzt sie und wie sind die mathematischen Eigenschaften von Verteilungsfunktionen hier konkret implementiert? 
 ```r
 x <- ecdf(rpois(100, 10))
@@ -21,13 +120,199 @@ x
 # Call: ecdf(rpois(100, 10))
 #  x[1:15] =      1,      4,      5,  ...,     16,     17
 ```
-- Schreiben Sie einen neuen low-level Konstruktor für `data.frame`-Objekte (ohne die Funktionen `as.data.frame()` oder `data.frame()` zu benutzen, selbstverständlich). Machen Sie sich zunächst klar: Auf welchem *base type* basiert `data.frame`? Welche Attribute nutzt `data.frame`? Welche Restriktionen gelten für die verschiedenen Einträge und Attribute?  
-    *Hinweis*: Sehen Sie sich dafür zunächst mal so etwas wie `str(unclass(<irgend ein data.frame>))` an.
-- Kategorisieren Sie die Klassen der Rückgabe-Objekte von `lm(), factor(), table(), as.Date(), as.POSIXct(), ecdf(), ordered(), I()` in die Klassentypen *vector class*, *record style class*, *scalar class* die in *Advanced R* beschrieben  werden.
-- Wie sähe ein Konstruktor `new_lm` für Objekte der Klasse `lm` aus? Warum wäre ein solcher Konstruktor vermutlich nicht besonders nützlich? 
-- Lesen Sie den Quellcode für `t()` und `t.test()`. Ist `t.test()` eine generische S3 Funktion oder eine S3 Methode? Was passiert im Detail wenn sie `t()` auf ein S3-Objekt mit Klasse `test` anwenden (s.u.)? Warum?
+
 ```r
+# R Klasse von ecdf, im weitesten Sinne Funktion, im engsten ecdf
+class(x)
+# [1] "ecdf"     "stepfun"  "function"
+
+# Basetype von ecdf ist logischerweise die colsure
+typeof(ecdf)
+# Da ecdf im weiteste Sinne eine Funktion ist, ist der Basetype 
+# [1] "closure"
+
+# Attribute class und call:
+attributes(x)
+# $class
+# [1] "ecdf"     "stepfun"  "function"
+# 
+# $call
+# ecdf(rpois(100, 10))
+
+# Methoden für ein ecdf Objekt
+methods(class= "ecdf")
+# [1] plot     print    quantile summary
+# print gibt den Funktionscode aus 
+# CODESNIPPET:
+#    rval <- approxfun(vals, cumsum(tabulate(match(x, vals)))/n, 
+#        method = "constant", yleft = 0, yright = 1, f = 0, 
+#        ties = "ordered")
+# Cumsum gibt die Mächtigkeit der einzelnen die gefundenen Werte wieder 
+# ornet sie, summiert sie auf und teilt sie durch die Mächtigkeit n des datensatzes
+# Y ist somit Teilmenge von [0,1] und bei Xmax ist Ymax = 1
+
+```
+
+
+### Aufgabe 4:
+
+Machen Sie sich zunächst klar: Auf welchem *base type* basiert `data.frame`? Welche Attribute nutzt `data.frame`? Welche Restriktionen gelten für die verschiedenen Einträge und Attribute?  
+    *Hinweis*: Sehen Sie sich dafür zunächst mal so etwas wie `str(unclass(<irgend ein data.frame>))` an.
+    
+
+```r
+# Auf welchem Basetype basieren dataframes?
+class(mtcars)
+# [1] "data.frame"
+typeof(mtcars)
+# [1] "list"
+attributes(mtcars)
+# $names
+#  [1] "mpg"  "cyl"  "disp" "hp"   "drat" "wt"   "qsec" "vs"   "am"   "gear" "carb"
+
+# $row.names
+#  [1] "Mazda RX4"           "Mazda RX4 Wag"       "Datsun 710"          "Hornet 4 Drive"     
+#  [5] "Hornet Sportabout"   "Valiant"             "Duster 360"          "Merc 240D"          
+#  [9] "Merc 230"            "Merc 280"            "Merc 280C"           "Merc 450SE"         
+# [13] "Merc 450SL"          "Merc 450SLC"         "Cadillac Fleetwood"  "Lincoln Continental"
+# [17] "Chrysler Imperial"   "Fiat 128"            "Honda Civic"         "Toyota Corolla"     
+# [21] "Toyota Corona"       "Dodge Challenger"    "AMC Javelin"         "Camaro Z28"         
+# [25] "Pontiac Firebird"    "Fiat X1-9"           "Porsche 914-2"       "Lotus Europa"       
+# [29] "Ford Pantera L"      "Ferrari Dino"        "Maserati Bora"       "Volvo 142E"         
+
+# $class
+# [1] "data.frame"
+
+
+# Hinweiß: 
+str(unclass(mtcars))
+# List of 11
+#  $ mpg : num [1:32] 21 21 22.8 21.4 18.7 18.1 14.3 24.4 22.8 19.2 ...
+#  $ cyl : num [1:32] 6 6 4 6 8 6 8 4 4 6 ...
+#  $ disp: num [1:32] 160 160 108 258 360 ...
+#  $ hp  : num [1:32] 110 110 93 110 175 105 245 62 95 123 ...
+#  $ drat: num [1:32] 3.9 3.9 3.85 3.08 3.15 2.76 3.21 3.69 3.92 3.92 ...
+#  $ wt  : num [1:32] 2.62 2.88 2.32 3.21 3.44 ...
+#  $ qsec: num [1:32] 16.5 17 18.6 19.4 17 ...
+#  $ vs  : num [1:32] 0 0 1 1 0 1 0 1 1 1 ...
+#  $ am  : num [1:32] 1 1 1 0 0 0 0 0 0 0 ...
+#  $ gear: num [1:32] 4 4 4 3 3 3 3 4 4 4 ...
+#  $ carb: num [1:32] 4 4 1 1 2 1 4 2 2 4 ...
+ - attr(*, "row.names")= chr [1:32] "Mazda RX4" "Mazda RX4 Wag" "Datsun 710" "Hornet 4 Drive" ...
+```
+
+- Schreiben Sie einen neuen low-level Konstruktor für `data.frame`-Objekte (ohne die Funktionen `as.data.frame()` oder `data.frame()` zu benutzen, selbstverständlich).
+
+```r
+# LOW-LEVEL
+# new_data.frame(), that efficiently creates new objects with the correct structure.
+new_data.frame <- function(x = list(), names = character(), row.names= character()) {
+  
+  checkmate::assert_list(x)
+  checkmate::assert_character(names, any.missing = FALSE, len= length(x))
+  checkmate::assert_character(row.names, any.missing = FALSE, len= length(x[[1]]))
+  
+  structure(x,
+    names = names,
+    row.names = row.names,
+    class = "data.frame")
+
+}
+
+# Re-construct mtcars
+new_data.frame(unclass(mtcars), names=attributes(mtcars)[["names"]], 
+                                row.names = attributes(mtcars)[["row.names"]])
+
+#sample new dataframe
+list_me <- list(norm = rnorm(40), pois = rpois(40, 0.5), unif = runif(40))
+
+new_data.frame(list_me, names= c("norm", "pois", "unif"), 
+                        srow.names = as.character(1:length(list_me[[1]])))
+
+```
+
+
+### Aufgabe 5:
+
+- Lesen Sie den Quellcode für `t()` und `t.test()`. Ist `t.test()` eine generische S3 Funktion oder eine S3 Methode? Was passiert im Detail wenn sie `t()` auf ein S3-Objekt mit Klasse `test` anwenden (s.u.)? Warum?
+
+```r
+t
+# function (x) 
+# UseMethod("t")
+# <bytecode: 0x000001910715e8c0>
+# <environment: namespace:base>
+t.test
+# function (x, ...) 
+# UseMethod("t.test")
+# <bytecode: 0x0000019105e94b80>
+# <environment: namespace:stats>
+
+# t.test ist eine eine genreische S3 funktion, wie t, 
+# nur dass  die methode schon vordefiniert ist als test
+sloop::ftype(t.test)
+# [1] "S3"      "generic"
+
+
 x <- structure(1:10, class = "test")
 t(x)
+
+
+identical(t(x), t.test(x))
+# [1] TRUE
 ```
+die Klasse kann man entwerder im vorhinein festlegen (wie im Beispiel) oder im S3 Generic stil mit `<generic>.<class>` aufrufen. Das Ergebnis ist das selbe: UseMethod ruft die methode test auf und ein ttest wird berechnet.
+
+
+### Aufagbe 6:
+
+- Kategorisieren Sie die Klassen der Rückgabe-Objekte von `lm(), factor(), table(), as.Date(), as.POSIXct(), ecdf(), ordered(), I()` in die Klassentypen *vector class*, *record style class*, *scalar class* die in *Advanced R* beschrieben  werden.
+
+vector class: *short Descr.:* length(x) represents the number of observations in the vector 
+
+(1) as.date
+(2) factor
+(3) table
+(4) ordered
+(5) as.POSIXct
+(6) I
+
+record style class: *short Descr.:*  use a list of equal-length vectors to represent individual components of the object
+
+ 
+
+scalar class: *short Descr.:* typically use a list to represent a single thing
+
+(1) lm
+(2) ecdf
+
+- Wie sähe ein Konstruktor `new_lm` für Objekte der Klasse `lm` aus? Warum wäre ein solcher Konstruktor vermutlich nicht besonders nützlich? 
+
+Use ?lm and experimentation to figure out the required fields and their types.
+
+```r
+attributes(lm(mpg~cyl, mtcars))
+$names
+ [1] "coefficients"  "residuals"     "effects"       "rank"          "fitted.values" "assign"       
+ [7] "qr"            "df.residual"   "xlevels"       "call"          "terms"         "model"        
+
+$class
+[1] "lm"
+
+Sketch
+new_lm <- function(formula = formula(), data= data.frame(), und so weiter..., ...) {
+
+structure(formula,
+    data = data,
+    class = "lm",
+    etc = etc
+    ...)
+}
+
+The ellipsis prevents the contructor from its actual purpose beneath assigning a class:
+typecheckinng is not possible anymore...
+
+
+```
+
 
