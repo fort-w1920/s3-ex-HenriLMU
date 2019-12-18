@@ -8,12 +8,13 @@ test_listoflists <- list(as.list(test_vec), list(test_vec))
 test_factor <- factor(test_vec)
 test_ordered <- ordered(test_vec)
 
-str(bb(test_vec))
-str(bb(test_matrix))
-str(bb(test_list))
-str(bb(test_listoflists))
-str(bb(test_factor))
-str(bb(test_ordered))
+str(bb(test_vec)) #works without specifications
+str(bb(test_matrix)) #works without specifications
+str(bb(test_array)) #works without specifications
+str(bb(test_list)) #works
+str(bb(test_listoflists)) #works
+str(bb(test_factor)) #works
+str(bb(test_ordered)) #works
 
 #-------------------------------------------------------------------------------
 # tests:
