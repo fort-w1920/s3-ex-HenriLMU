@@ -24,7 +24,7 @@ bb.factor <- function(text) {
   bb_text <- gsub(pattern = match, replacement = "\\1\\2b\\2\\3", x = text)
   #save levels
   tmp_lev <- levels(text)
-  bb_levels <- gsub(pattern = match, replacement = "\\1\\2b\\2\\3", x = levels)
+  bb_levels <- gsub(pattern = match, replacement = "\\1\\2b\\2\\3", x = tmp_lev)
   tmp_order <- is.ordered(text)
   
   bb_factor <- factor(bb_text, levels = bb.default(tmp_lev),
