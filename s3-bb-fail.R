@@ -7,3 +7,5 @@ fail_list <- list("bbficate this", fail_vec)
 bb(fail_vec)
 bb(fail_matrix)
 bb(fail_list)
+
+

@@ -1,6 +1,7 @@
 ## test data for bb():
 texttest <- "Bedeutet nach jedem Vokal oder Diphtong die Konsonanten..."
 test_vec <- strsplit(texttest, " ")[[1]]
+
 test_matrix <- matrix(test_vec, nrow = 2, ncol = 4, byrow = TRUE)
 test_array <- array(test_vec, dim = c(2, 2, 2))
 test_list <- as.list(test_vec)
@@ -60,3 +61,4 @@ expect_equivalent(levels(bb(test_ordered)),
                   sort(bb_testvec)[c(1, 3, 2, 4:8)]) #alphabetic order changes!
 expect_is(bb(test_ordered), "bb")
 expect_is(bb(test_ordered), "ordered")
+
